@@ -27,6 +27,7 @@ ZIP_NAME=${ZIP_BASE}${NOW}
 [ -z "${S3_ENDPOINT}" ] && { echo "S3 endpoint not set in S3_ENDPOINT environment variable" ; exit 1; }
 [ -z "${BUCKET}" ] && { echo "S3 bucketname not set in BUCKET environment variable" ; exit 1; }
 [ -z "${BUCKETPATH}" ] && { echo "Path within S3 bucket not set in BUCKETPATH environment variable" ; exit 1; }
+[ -z "${DELETE_DUMP}" ] || echo "DELETE_DUMP set, will delete files/directories under /dump/ when done compressing"
 
 # This is the password used to generate the AES256 encryption key
 SECRET=`cat /run/secrets/encryption_key`
@@ -45,7 +46,8 @@ echo "Deleting database archives older than 30 days"
 
 echo "Zipping ${DUMP_BASE}/${DUMP_DIR} to ${ZIP_DIR}/${ZIP_NAME}"
 cd /
-echo time /usr/bin/7za a -p${SECRET} ${ZIP_DIR}/${ZIP_NAME}  -mx=7 -mhe -t7z ${DUMP_BASE}
+/usr/bin/7za a -p${SECRET} ${ZIP_DIR}/${ZIP_NAME}  -mx=7 -mhe -t7z ${DUMP_BASE}
+[ -z "${DELETE_DUMP}" ] || { echo "Clearing contents of /dump/"; cd /dump/; rm -rf *; }
 
 echo "RClone-ing ${ZIP_DIR} to GCP ${GCP_DEST}"
 sed -i s/S3_ENDPOINT/${S3_ENDPOINT}/ /root/.config/rclone/rclone.conf
