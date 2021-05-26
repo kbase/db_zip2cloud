@@ -1,0 +1,53 @@
+#!/bin/sh
+
+# Script to compress and encrypt mongodb backup directories and then sync them against a
+# cloud S3 bucket
+#
+# Depends on 7zip and rclone
+#
+# sychan@lbl.gov
+# 5/21/2021
+
+# Directory containing db dumps to be archived/compressed/copied
+DUMP_BASE=/dump/
+
+# Directory to put the zipped backups
+ZIP_DIR=/zip/
+
+NOW=$(/bin/date +"%Y%m%d%H%M")
+
+# Name of the zip'ed db backup. The .7z extension wil be added by the 7zip program
+
+ZIP_BASE=backup_full_
+ZIP_NAME=${ZIP_BASE}${NOW}
+
+[ -r /run/secrets/encryption_key ] || { echo "Encryption key not readable in /run/secrets/encryption_key" ; exit 1; }
+[ -r /run/secrets/s3_access_key ] || { echo "S3 access key not readable in /run/secrets/s3_access_key" ; exit 1; }
+[ -r /run/secrets/s3_secret_key ] || { echo "S3 secret key not readable in /run/secrets/s3_secret_key" ; exit 1; }
+[ -z "${S3_ENDPOINT}" ] && { echo "S3 endpoint not set in S3_ENDPOINT environment variable" ; exit 1; }
+[ -z "${BUCKET}" ] && { echo "S3 bucketname not set in BUCKET environment variable" ; exit 1; }
+[ -z "${BUCKETPATH}" ] && { echo "Path within S3 bucket not set in BUCKETPATH environment variable" ; exit 1; }
+
+# This is the password used to generate the AES256 encryption key
+SECRET=`cat /run/secrets/encryption_key`
+
+# Setup the S3 creds where rclone expects to find them in environment
+AWS_ACCESS_KEY=`cat /run/secrets/s3_access_key`
+AWS_SECRET_KEY=`cat /run/secrets/s3_secret_key`
+
+# This is the Google Cloud Storage path, note that it depends on rclone being preconfigured
+# for "remote" using the runtime creds, check rclone config in /root/.config/rclone/rclone.conf
+REMOTE=remote:${BUCKET}/${BUCKETPATH}
+
+# Delete any files older than 30 days in the zip directory
+echo "Deleting database archives older than 30 days"
+/usr/bin/find ${ZIP_DIR} -mtime +30 -type f -name "${ZIP_BASE}*" -print -exec rm {} \;
+
+echo "Zipping ${DUMP_BASE}/${DUMP_DIR} to ${ZIP_DIR}/${ZIP_NAME}"
+cd /
+echo time /usr/bin/7za a -p${SECRET} ${ZIP_DIR}/${ZIP_NAME}  -mx=7 -mhe -t7z ${DUMP_BASE}
+
+echo "RClone-ing ${ZIP_DIR} to GCP ${GCP_DEST}"
+sed -i s/S3_ENDPOINT/${S3_ENDPOINT}/ /root/.config/rclone/rclone.conf
+/usr/local/bin/rclone sync ${ZIP_DIR}/ ${REMOTE}
+
