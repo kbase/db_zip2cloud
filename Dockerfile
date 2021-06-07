@@ -23,7 +23,7 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.schema-version="1.0.0-rc1" \
       us.kbase.vcs-branch=$BRANCH  \
       maintainer="Steve Chan sychan@lbl.gov" \
-      org.opencontainers.image.source=https://github.com/kbase/db_zip2cloud"
+      org.opencontainers.image.source="https://github.com/kbase/db_zip2cloud"
 
 WORKDIR /app
 
