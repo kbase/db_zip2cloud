@@ -46,10 +46,10 @@ echo "Deleting database archives older than 30 days"
 
 echo "Zipping ${DUMP_BASE}/${DUMP_DIR} to ${ZIP_DIR}/${ZIP_NAME}"
 cd /
-/usr/bin/7za a -p${SECRET} ${ZIP_DIR}/${ZIP_NAME}  -mx=7 -mhe -t7z ${DUMP_BASE}
+/usr/bin/7za a -p${SECRET} ${ZIP_DIR}/${ZIP_NAME}  -mx=7 -mhe -t7z ${DUMP_BASE} || { echo "Could not zip ${DUMP_BASE} into ${ZIP_DIR}/${ZIP_NAME}" ; exit 1; }
 [ -z "${DELETE_DUMP}" ] || { echo "Clearing contents of /dump/"; cd /dump/; rm -rf *; }
 
 echo "RClone-ing ${ZIP_DIR} to GCP ${GCP_DEST}"
-sed -i s/S3_ENDPOINT/${S3_ENDPOINT}/ /root/.config/rclone/rclone.conf
+sed -i s/S3_ENDPOINT/${S3_ENDPOINT}/ /root/.config/rclone/rclone.conf || { echo "Could not set S3_ENDPOINT in /root/.config/rclone/rclone.conf" ; exit 1; }
 /usr/local/bin/rclone sync ${ZIP_DIR}/ ${REMOTE}
 
