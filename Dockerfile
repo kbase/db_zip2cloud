@@ -27,6 +27,6 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
 
 WORKDIR /app
 
-ENTRYPOINT /bin/sh
+ENTRYPOINT /app/zip2cloud
 
-CMD /app/zip2cloud
+
