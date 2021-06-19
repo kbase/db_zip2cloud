@@ -51,5 +51,5 @@ cd /
 
 echo "RClone-ing ${ZIP_DIR} to GCP ${GCP_DEST}"
 sed -i s/S3_ENDPOINT/${S3_ENDPOINT}/ /root/.config/rclone/rclone.conf || { echo "Could not set S3_ENDPOINT in /root/.config/rclone/rclone.conf" ; exit 1; }
-/usr/local/bin/rclone sync ${ZIP_DIR}/ ${REMOTE}
+/bin/rclone sync ${ZIP_DIR}/ ${REMOTE}
 
