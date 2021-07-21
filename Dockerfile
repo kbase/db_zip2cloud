@@ -11,7 +11,7 @@ RUN apk update && \
     cd /tmp && \
     wget https://downloads.rclone.org/rclone-current-linux-amd64.zip && \
     unzip rclone-current-linux-amd64.zip && \
-    mv rclone-v1.55.1-linux-amd64/rclone /bin/rclone && \
+    mv rclone-v*-linux-amd64/rclone /bin/rclone && \
     mkdir -p /root/.config/rclone/
 
 COPY rclone.conf /root/.config/rclone/rclone.conf
