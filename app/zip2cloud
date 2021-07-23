@@ -22,9 +22,7 @@ ZIP_BASE=backup_full_
 ZIP_NAME=${ZIP_BASE}${NOW}
 
 [ -r /run/secrets/encryption_key ] || { echo "Encryption key not readable in /run/secrets/encryption_key" ; exit 1; }
-[ -r /run/secrets/s3_access_key ] || { echo "S3 access key not readable in /run/secrets/s3_access_key" ; exit 1; }
-[ -r /run/secrets/s3_secret_key ] || { echo "S3 secret key not readable in /run/secrets/s3_secret_key" ; exit 1; }
-[ -z "${S3_ENDPOINT}" ] && { echo "S3 endpoint not set in S3_ENDPOINT environment variable" ; exit 1; }
+[ -r /run/secrets/gcp_backup_creds ] || { echo "Google cloud service credentials not found in /run/secrets/gcp_back_creds" ; exit 1; }
 [ -z "${BUCKET}" ] && { echo "S3 bucketname not set in BUCKET environment variable" ; exit 1; }
 [ -z "${BUCKETPATH}" ] && { echo "Path within S3 bucket not set in BUCKETPATH environment variable" ; exit 1; }
 [ -z "${DELETE_DUMP}" ] || echo "DELETE_DUMP set, will delete files/directories under /dump/ when done compressing"
@@ -32,18 +30,9 @@ ZIP_NAME=${ZIP_BASE}${NOW}
 # This is the password used to generate the AES256 encryption key
 SECRET=`cat /run/secrets/encryption_key`
 
-# Setup the S3 creds where rclone expects to find them in environment
-export AWS_ACCESS_KEY=`cat /run/secrets/s3_access_key`
-export AWS_SECRET_KEY=`cat /run/secrets/s3_secret_key`
-
 # This is the Google Cloud Storage path, note that it depends on rclone being preconfigured
 # for "remote" using the runtime creds, check rclone config in /root/.config/rclone/rclone.conf
 REMOTE=remote:${BUCKET}/${BUCKETPATH}
-
-echo "Updating rclone.conf with configuration"
-sed -i s/S3_ENDPOINT/${S3_ENDPOINT}/ /root/.config/rclone/rclone.conf || { echo "Could not set S3_ENDPOINT in /root/.config/rclone/rclone.conf" ; exit 1; }
-echo "Contents of rclone.conf - credentials are in AWS_ACCESS_KEY and AWS_SECRET_KEY"
-cat /root/.config/rclone/rclone.conf
 
 # Delete any files older than 30 days in the zip directory
 echo "Deleting database archives older than 30 days"
