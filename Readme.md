@@ -8,15 +8,13 @@ This is a container for backing up databases such as ArangoDB, compressing the b
 2. Use 7zip to compress and encrypt the contents of the /dump/ directory and put it in into /zip/
    * The resulting zip will have have "dump/" as the relative root directory
 3. Prune any files in /zip/ that are older than 30 days
-4. Use rclone with an AWS S3 compatible provider to synchronize /zip/ against a remote S3 bucket and directory
+4. Use rclone with an AWS S3 compatible provider to synchronize /zip/ against a remote S3 bucket and directory. Currently configured for Google Cloud Storage in file rclone.conf
 
 This container requires the following secrets to be in /var/run/secrets:
 * encryption_key - Encryption key used by 7zip for encryption of compressed files
-* s3_access_key  - S3 Access Key for use with rclone
-* s3_secret_key  - S3 Secret Key for use with rclone
+* gcp_backup_creds  - Google service credentials JSON secret for use with rclone (see rclone.conf file for service_account_file directive)
 
 The following environment variables need to be passed into the runtime environment
-* S3_ENDPOINT  - The hostname for the S3 endpoint, without the http:// prefix, for example "storage.googleapis.com"
 * BUCKET       - The name of the bucket to be used as the destinatio for copying the backups
 * BUCKETPATH   - Path with the bucket to deposit the zipped db files
 
