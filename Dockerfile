@@ -1,4 +1,4 @@
-FROM arangodb:3.5.3
+FROM arangodb:3.8.0
 
 # Build arguments passed into the docker command for image metadata
 ARG BUILD_DATE
