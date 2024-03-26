@@ -9,17 +9,19 @@
 # 5/21/2021
 
 # Directory containing db dumps to be archived/compressed/copied
-DUMP_BASE=/dump/
+#DUMP_BASE=/Users/jsfillman/Documents/repos/jsfillman-github/tmp-backup-test
+DUMP_BASE=/dump/full_backup
 
 # Directory to put the zipped backups
-ZIP_DIR=/zip/
+#ZIP_DIR=/Users/jsfillman/Documents/repos/jsfillman-github/tmp-backup-zip
+ZIP_DIR=/zip
 
 NOW=$(/bin/date +"%Y%m%d%H%M")
 
 # Name of the zip'ed db backup. The .7z extension wil be added by the 7zip program
 
-ZIP_BASE=backup_full_
-ZIP_NAME=${ZIP_BASE}${NOW}
+ZIP_BASE=backup_full
+#ZIP_NAME=${ZIP_BASE}${NOW}
 
 [ -r /run/secrets/encryption_key ] || { echo "Encryption key not readable in /run/secrets/encryption_key" ; exit 1; }
 [ -r /run/secrets/gcp_backup_creds ] || { echo "Google cloud service credentials not found in /run/secrets/gcp_back_creds" ; exit 1; }
@@ -27,11 +29,12 @@ ZIP_NAME=${ZIP_BASE}${NOW}
 [ -z "${BUCKETPATH}" ] && { echo "Path within S3 bucket not set in BUCKETPATH environment variable" ; exit 1; }
 [ -z "${DELETE_DUMP}" ] || echo "DELETE_DUMP set, will delete files/directories under /dump/ when done compressing"
 
-# This is the password used to generate the AES256 encryption key
+## This is the password used to generate the AES256 encryption key
+#SECRET=tempsecret
 SECRET=`cat /run/secrets/encryption_key`
-
-# This is the Google Cloud Storage path, note that it depends on rclone being preconfigured
-# for "remote" using the runtime creds, check rclone config in /root/.config/rclone/rclone.conf
+#
+## This is the Google Cloud Storage path, note that it depends on rclone being preconfigured
+## for "remote" using the runtime creds, check rclone config in /root/.config/rclone/rclone.conf
 REMOTE=remote:${BUCKET}/${BUCKETPATH}
 
 # Delete any files older than 30 days in the zip directory
@@ -39,10 +42,24 @@ echo "Deleting database archives older than 30 days"
 /usr/bin/find ${ZIP_DIR} -mtime +30 -type f -name "${ZIP_BASE}*" -print -exec rm {} \;
 
 echo "Zipping ${DUMP_BASE}/${DUMP_DIR} to ${ZIP_DIR}/${ZIP_NAME}"
-cd /
-/usr/bin/7za a -p${SECRET} ${ZIP_DIR}/${ZIP_NAME}  -mx=7 -mhe -t7z ${DUMP_BASE} || { echo "Could not zip ${DUMP_BASE} into ${ZIP_DIR}/${ZIP_NAME}" ; exit 1; }
-[ -z "${DELETE_DUMP}" ] || { echo "Clearing contents of /dump/"; cd /dump/; rm -rf *; }
 
-echo "RClone-ing ${ZIP_DIR} to GCP ${GCP_DEST}"
-/bin/rclone sync ${ZIP_DIR}/ ${REMOTE}
+# Get all directories in DUMP_BASE
+for DUMP_DIR in $(ls -d ${DUMP_BASE}/*/); do
+    # Remove trailing slash and get the base name of the directory
+    DIR_NAME=$(basename ${DUMP_DIR%/})
+    ZIP_NAME=${ZIP_DIR}/${ZIP_BASE}_${DIR_NAME}
 
+    echo "Zipping ${DUMP_DIR} to ${ZIP_NAME}"
+    /usr/bin/7za a -p${SECRET} ${ZIP_NAME}  -mx=0 -mhe -t7z ${DUMP_DIR} || { echo "Could not zip ${DUMP_DIR} into ${ZIP_NAME}" ; exit 1; }
+done
+
+## Sync All Resulting Files
+cd ${ZIP_DIR}
+for file in ${ZIP_DIR}/*; do
+    echo "RClone-ing ${file} to GCP ${GCP_DEST}"
+    /bin/rclone sync -v "$file" ${REMOTE}
+done
+
+## Create a block that, upon success of rclone above, delete _only_ files that were uploaded
+## For each $FILE.7z in $ZIP_DIR, do a "rm -rf $DUMP_BASE/$FILE" to remove the original dump
+#[ -z "${DELETE_DUMP}" ] || { echo "Clearing contents of /dump/"; cd /dump/; rm -rf *; }
